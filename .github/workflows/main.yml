@@ -55,3 +55,33 @@ jobs:
             Write-Host "Downloading $fileName..."
             Invoke-WebRequest -Uri $url -OutFile "$dest\$fileName"
           }
+
+      - name: Download Chrome
+        run: fxd get-chrome
+
+      - name: Prebuild
+        run: prebuild
+
+      - name: Generate build files
+        run: fxd gen -game five
+
+      - name: Generate solution
+        run: fxd vs -game five
+    
+      - name: Run Build Environment Setup
+        shell: cmd
+        run: msbuild code/build/five/citizen.sln  /m /p:Configuration=Release
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fivem-gogsi-bin
+          path: code/bin/*
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: code/bin/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
