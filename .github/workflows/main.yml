@@ -77,8 +77,9 @@ jobs:
         shell: cmd
         run: fxd vs -game five
     
-      - name: Run Build Environment Setup
-        run: msbuild code\build\five\CitizenMP.sln /m /p:Configuration=Release /p:WindowsTargetPlatformVersion=10.0
+      - name: Build
+        shell: cmd
+        run: fxd build -game five
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -87,7 +88,6 @@ jobs:
           path: code/bin/*
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: code/bin/*
