@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Setup Python
         uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install pip
         run: py -m pip install --upgrade pip
@@ -61,6 +63,7 @@ jobs:
         run: fxd get-chrome
 
       - name: Prebuild
+        shell: cmd
         run: prebuild
 
       - name: Generate build files
@@ -73,7 +76,7 @@ jobs:
     
       - name: Run Build Environment Setup
         shell: cmd
-        run: msbuild code/build/five/citizen.sln  /m /p:Configuration=Release
+        run: msbuild code\build\five\CitizenMP.sln /m /p:Configuration=Release /p:WindowsTargetPlatformVersion=10.0
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
