@@ -10,11 +10,6 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      - name: Clean Workspace
-        run: |
-          Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse | Remove-Item -Force -Recurse
-        shell: pwsh
-
       - name: Manual Clone Gogsi Fork
         shell: cmd
         run: |
@@ -22,6 +17,9 @@ jobs:
           set GIT_LFS_SKIP_SMUDGE=1
           git clone https://github.com/Gogsi/fivem.git -b wine-win10 -c core.symlinks=true .
           git submodule update --jobs=16 --init
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
       - name: Install Build Dependencies
         run: |
@@ -55,6 +53,9 @@ jobs:
       - name: Run Build Environment Setup
         shell: cmd
         run: |
+          :: Ensure local scripts are in path
+          set PATH=%CD%;%PATH%
+          
           :: Download Chrome
           call fxd get-chrome
           
@@ -64,7 +65,7 @@ jobs:
           :: Generate solution
           call fxd gen -game five
           
-          :: Compile using MSBuild
+          :: Compile using MSBuild (Now accessible thanks to setup-msbuild)
           msbuild code/client/citizen/citizen.sln /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Upload Build Artifacts
