@@ -7,10 +7,6 @@ jobs:
 generate:
 runs-on: windows-2022
 
-```
-env:
-  GIT_LFS_SKIP_SMUDGE: 1
-
 steps:
   - name: Configure Git
     shell: cmd
@@ -86,4 +82,3 @@ steps:
       path: |
         fivem/*.sln
         fivem/code/**
-```
