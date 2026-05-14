@@ -1,72 +1,57 @@
-name: Build FiveM Gogsi Fork
+name: Build FiveM
 
 on:
-  push:
-    branches: [ "wine-win10" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 90 
 
     steps:
-      - name: Manual Clone Gogsi Fork
+      - name: Setup Python
+        uses: actions/setup-python@v5
+
+      - name: Install pip
+        run: py -m pip install --upgrade pip
+  
+      - name: Install setuptools
+        run: py -m pip install setuptools
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+
+      - name: Clone FiveM
         shell: cmd
         run: |
-          git config --global core.symlinks true
           set GIT_LFS_SKIP_SMUDGE=1
           git clone https://github.com/Gogsi/fivem.git -b wine-win10 -c core.symlinks=true .
           git submodule update --jobs=16 --init
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Install Build Dependencies
-        run: |
-          choco install msys2 -y --params "/NoUpdate /InstallDir:C:\msys64"
-          python -m pip install --upgrade pip
-          pip install setuptools
-          npm install --global yarn
-
-      - name: Inject libnode Assets
+      - name: Download libnode binaries
         shell: pwsh
         run: |
           $dest = "vendor/libnode/bin"
-          if (!(Test-Path $dest)) { New-Item -ItemType Directory -Force -Path $dest }
-          $baseUrl = "https://github.com/citizenfx/libnode/releases/download/v22.22.0"
-          $files = @("libnode22.dll", "libnode22.lib", "libnode22.pdb", "libuv.dll", "libuv.lib", "libuv.pdb")
-          foreach ($file in $files) {
-            Invoke-WebRequest -Uri "$baseUrl/$file" -OutFile "$dest/$file" -MaximumRetryCount 5
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+
+          $files = @(
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libnode22.dll",
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libnode22.lib",
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libnode22.pdb",
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libnode22.so",
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libuv.dll",
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libuv.lib",
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libuv.pdb",
+            "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libuv.so"
+          )
+
+          foreach ($url in $files) {
+            $fileName = $url.Split("/")[-1]
+            Write-Host "Downloading $fileName..."
+            Invoke-WebRequest -Uri $url -OutFile "$dest\$fileName"
           }
-
-      - name: Run Build Environment Setup
-        shell: cmd
-        run: |
-          set PATH=%CD%;%PATH%
-          call fxd get-chrome
-          call prebuild
-          call fxd gen -game five
-
-      - name: Compile FiveM
-        shell: pwsh
-        run: |
-          # Automatically find the generated solution file
-          $slnPath = Get-ChildItem -Recurse -Filter "citizen.sln" | Select-Object -ExpandProperty FullName -First 1
-          
-          if ($null -eq $slnPath) {
-              Write-Error "Could not find citizen.sln! Check if 'fxd gen' actually created it."
-              exit 1
-          }
-          
-          Write-Host "Found solution at: $slnPath"
-          
-          # Run MSBuild on the discovered path
-          msbuild $slnPath /p:Configuration=Release /p:Platform=x64 /m /v:m
-
-      - name: Upload Build Artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fivem-gogsi-bin
-          path: code/bin/*
