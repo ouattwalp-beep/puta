@@ -1,10 +1,10 @@
-name: Generate FiveM Solution
+name: Build & Release FiveM Binaries
 
 on:
   workflow_dispatch:
 
 jobs:
-  generate:
+  build:
     runs-on: windows-2022
 
     env:
@@ -20,6 +20,27 @@ jobs:
           git clone https://github.com/Gogsi/fivem.git -b wine-win10 -c core.symlinks=true
           cd fivem
           git submodule update --jobs=16 --init
+
+      - name: Create libnode directory
+        run: mkdir fivem\vendor\libnode\bin
+
+      - name: Download libnode release assets
+        shell: powershell
+        run: |
+          $release = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/citizenfx/libnode/releases/tags/v22.22.0"
+
+          $assets = $release.assets | Where-Object {
+            $_.name -notmatch "source"
+          }
+
+          foreach ($asset in $assets) {
+            $out = "fivem/vendor/libnode/bin/$($asset.name)"
+            Write-Host "Downloading $($asset.name)"
+            Invoke-WebRequest `
+              -Uri $asset.browser_download_url `
+              -OutFile $out
+          }
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -61,3 +82,25 @@ jobs:
         run: |
           fxd gen -game five
           fxd vs -game five
+
+      - name: Build solution
+        working-directory: fivem
+        shell: cmd
+        run: |
+          msbuild /m /p:Configuration=Release CitizenMP.sln
+
+      - name: Archive bin folder
+        shell: powershell
+        run: |
+          Compress-Archive `
+            -Path "fivem/code/bin/*" `
+            -DestinationPath "fivem-bin.zip"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: FiveM Build ${{ github.run_number }}
+          files: fivem-bin.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
