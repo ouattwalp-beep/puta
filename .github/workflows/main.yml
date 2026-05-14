@@ -33,13 +33,24 @@ jobs:
       - name: Inject libnode Assets
         shell: pwsh
         run: |
-          $url = "https://github.com/citizenfx/libnode/releases/download/v22.22.0/libnode-v22.22.0-windows-x64.zip"
           $dest = "vendor/libnode/bin"
           if (!(Test-Path $dest)) { New-Item -ItemType Directory -Force -Path $dest }
           
-          Invoke-WebRequest -Uri $url -OutFile "libnode_assets.zip"
-          Expand-Archive -Path "libnode_assets.zip" -DestinationPath $dest -Force
-          Remove-Item "libnode_assets.zip"
+          $baseUrl = "https://github.com/citizenfx/libnode/releases/download/v22.22.0"
+          $files = @(
+            "libnode22.dll", 
+            "libnode22.lib", 
+            "libnode22.pdb", 
+            "libuv.dll", 
+            "libuv.lib", 
+            "libuv.pdb"
+          )
+
+          foreach ($file in $files) {
+            Write-Host "Downloading $file..."
+            $url = "$baseUrl/$file"
+            Invoke-WebRequest -Uri $url -OutFile "$dest/$file" -MaximumRetryCount 3
+          }
 
       - name: Run Build Environment Setup
         shell: cmd
