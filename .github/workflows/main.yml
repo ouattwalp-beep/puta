@@ -79,17 +79,10 @@ jobs:
     
       - name: Build
         shell: cmd
-        run: fxd build -game five
+        run: msbuild /p:configuration=Release /m code/build/five/CitizenMP.sln
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: fivem-gogsi-bin
-          path: code/bin/*
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: code/bin/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: /
