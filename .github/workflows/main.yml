@@ -57,15 +57,18 @@ jobs:
           }
 
       - name: Download Chrome
+        shell: cmd
         run: fxd get-chrome
 
       - name: Prebuild
         run: prebuild
 
       - name: Generate build files
+        shell: cmd
         run: fxd gen -game five
 
       - name: Generate solution
+        shell: cmd
         run: fxd vs -game five
     
       - name: Run Build Environment Setup
