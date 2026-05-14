@@ -1,0 +1,89 @@
+name: Generate FiveM Solution
+
+on:
+workflow_dispatch:
+
+jobs:
+generate:
+runs-on: windows-2022
+
+```
+env:
+  GIT_LFS_SKIP_SMUDGE: 1
+
+steps:
+  - name: Configure Git
+    shell: cmd
+    run: |
+      git config --global core.symlinks true
+
+  - name: Clone FiveM repository
+    shell: cmd
+    run: |
+      git clone https://github.com/Gogsi/fivem.git -b wine-win10 -c core.symlinks=true
+      cd fivem
+      git submodule update --jobs=16 --init
+
+  - name: Setup Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: "3.12"
+
+  - name: Install setuptools
+    shell: cmd
+    run: |
+      pip install setuptools
+
+  - name: Setup Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: "20"
+
+  - name: Install Yarn
+    shell: cmd
+    run: |
+      npm install -g yarn
+
+  - name: Setup MSYS2
+    uses: msys2/setup-msys2@v2
+    with:
+      install: >-
+        git
+        make
+        mingw-w64-x86_64-toolchain
+
+  - name: Setup Visual Studio environment
+    uses: ilammy/msvc-dev-cmd@v1
+
+  - name: Install PowerShell 7
+    shell: powershell
+    run: |
+      winget install --id Microsoft.Powershell --source winget --accept-package-agreements --accept-source-agreements
+
+  - name: Download Chrome
+    shell: cmd
+    working-directory: fivem
+    run: |
+      fxd get-chrome
+
+  - name: Prebuild natives
+    shell: cmd
+    working-directory: fivem
+    run: |
+      prebuild
+
+  - name: Generate project files
+    shell: cmd
+    working-directory: fivem
+    run: |
+      fxd gen -game five
+      fxd vs -game five
+
+  - name: Upload solution artifacts
+    uses: actions/upload-artifact@v4
+    with:
+      name: fivem-sln
+      path: |
+        fivem/*.sln
+        fivem/code/**
+```
