@@ -1,9 +1,7 @@
-name: Build FiveM (Gogsi Fork - wine-win10)
+name: Build FiveM Gogsi Fork
 
 on:
   push:
-    branches: [ "wine-win10" ]
-  pull_request:
     branches: [ "wine-win10" ]
   workflow_dispatch:
 
@@ -12,37 +10,24 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      - name: Configure Git Symlinks
+      - name: Clean Workspace
         run: |
-          git config --global core.symlinks true
+          Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse | Remove-Item -Force -Recurse
+        shell: pwsh
 
-      - name: Checkout Gogsi Fork
-        uses: actions/checkout:v4
-        with:
-          repository: 'Gogsi/fivem'
-          ref: 'wine-win10'
-          submodules: false # Handled manually below for precision
-          fetch-depth: 0
-
-      - name: Setup Environment Variables
-        run: |
-          echo "GIT_LFS_SKIP_SMUDGE=1" >> $GITHUB_ENV
-
-      - name: Update Submodules
+      - name: Manual Clone Gogsi Fork
         shell: cmd
         run: |
+          git config --global core.symlinks true
+          set GIT_LFS_SKIP_SMUDGE=1
+          git clone https://github.com/Gogsi/fivem.git -b wine-win10 -c core.symlinks=true .
           git submodule update --jobs=16 --init
 
       - name: Install Build Dependencies
         run: |
-          # Install MSYS2 to the specific required path
           choco install msys2 -y --params "/NoUpdate /InstallDir:C:\msys64"
-          
-          # Setup Python requirements
           python -m pip install --upgrade pip
           pip install setuptools
-          
-          # Ensure Yarn is available
           npm install --global yarn
 
       - name: Inject libnode Assets
@@ -59,14 +44,13 @@ jobs:
       - name: Run Build Environment Setup
         shell: cmd
         run: |
-          :: Ensure local scripts are executable
-          set PATH=%CD%;%PATH%
-          
-          :: Execute Cfx.re build chain
+          :: Download Chrome
           call fxd get-chrome
+          
+          :: Build bindings
           call prebuild
           
-          :: Generate solution for FiveM
+          :: Generate solution
           call fxd gen -game five
           
           :: Compile using MSBuild
@@ -75,7 +59,7 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: fivem-wine-win10-bin
+          name: fivem-gogsi-bin
           path: code/bin/*
 
       - name: Create Release
