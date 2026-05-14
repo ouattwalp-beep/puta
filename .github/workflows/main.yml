@@ -73,7 +73,7 @@ jobs:
     
       - name: Build
         shell: cmd
-        run: msbuild /p:configuration=Release /m code/build/five/CitizenMP.sln
+        run: msbuild /p:configuration=Release /m /p:WindowsTargetPlatformVersion=10.0 code/build/five/CitizenMP.sln
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
